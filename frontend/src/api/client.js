@@ -8,7 +8,7 @@ export async function apiFetch(path, options = {}, token = null) {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: { ...headers, ...options.headers },
-    signal: options.signal || AbortSignal.timeout(8000)
+    signal: options.signal || AbortSignal.timeout(60000) // 60s pour Render gratuit (cold start)
   });
 
   if (!res.ok) {

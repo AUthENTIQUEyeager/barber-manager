@@ -6,9 +6,9 @@ import SyncBadge from '../../components/SyncBadge.jsx';
 import { ToastContainer } from '../../components/Toast.jsx';
 import { getAllLocalPrestations, getCoiffures } from '../../db/indexeddb.js';
 
-function fmt(n) { return new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)) + ' FCFA'; }
-function fmtDate(d) {
-  return new Date(d).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+function fmt(n) { return new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + ' F'; }
+function fmtTime(d) {
+  return new Date(d).toLocaleString('fr-FR', { hour:'2-digit', minute:'2-digit' });
 }
 
 export default function CoiffeurDashboard() {
@@ -17,124 +17,126 @@ export default function CoiffeurDashboard() {
   const [stats, setStats] = useState(null);
   const [localPrestations, setLocalPrestations] = useState([]);
   const [coiffures, setCoiffures] = useState({});
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Charger stats serveur
     if (navigator.onLine && token) {
       api.get('/api/stats/coiffeur', token).then(setStats).catch(console.warn);
     }
-
-    // Charger prestations locales
     getAllLocalPrestations().then(setLocalPrestations);
-
-    // Charger coiffures du cache
     getCoiffures().then(list => {
       const map = {};
       list.forEach(c => map[c.id] = c);
       setCoiffures(map);
     });
-
-    setLoading(false);
   }, [token]);
 
-  async function handleLogout() {
-    await logout();
-    navigate('/');
-  }
-
-  // Calcul offline si pas de stats serveur
   const today = new Date().toDateString();
   const gainJourLocal = localPrestations
     .filter(p => new Date(p.created_at).toDateString() === today)
-    .reduce((acc, p) => acc + parseFloat(p.prix || 0), 0);
+    .reduce((acc, p) => acc + parseFloat(p.prix||0), 0);
   const clientsJourLocal = localPrestations.filter(p => new Date(p.created_at).toDateString() === today).length;
 
   const gainJour = stats?.gain_jour ?? gainJourLocal;
   const clientsJour = stats?.clients_jour ?? clientsJourLocal;
 
+  const todayLocal = localPrestations.filter(p => new Date(p.created_at).toDateString() === today);
+
+  const initiales = user?.nom?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || 'CO';
+
   return (
     <div className="app-layout">
       <ToastContainer />
       <header className="app-header">
-        <div>
-          <div className="app-header-title">✂️ {user?.nom}</div>
-          <div style={{ fontSize: 11, color: 'var(--text2)' }}>{salon?.nom}</div>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:34,height:34,borderRadius:8,background:'var(--accent-light)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:13,color:'var(--accent)',flexShrink:0}}>
+            {initiales}
+          </div>
+          <div>
+            <div className="app-header-title">{user?.nom}</div>
+            <div className="app-header-sub">{salon?.nom}</div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <SyncBadge />
-          <button className="btn btn-secondary btn-sm" onClick={handleLogout} style={{ padding: '6px 10px' }}>
-            🚪
+          <button className="btn btn-ghost btn-sm" onClick={async () => { await logout(); navigate('/'); }} aria-label="Déconnexion">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
         </div>
       </header>
 
       <main className="app-content">
         {/* Stats du jour */}
-        <div className="stats-grid" style={{ marginBottom: 16 }}>
+        <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-label">💰 Gain aujourd'hui</div>
-            <div className="stat-value">{fmt(gainJour)}</div>
+            <div className="stat-label">Gain aujourd'hui</div>
+            <div className="stat-value stat-accent">{fmt(gainJour)}</div>
             <div className="stat-sub">{clientsJour} client(s)</div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">📅 Cette semaine</div>
-            <div className="stat-value" style={{ fontSize: 18 }}>{fmt(stats?.gain_semaine ?? 0)}</div>
+            <div className="stat-label">Cette semaine</div>
+            <div className="stat-value">{fmt(stats?.gain_semaine ?? 0)}</div>
             <div className="stat-sub">{stats?.clients_semaine ?? '—'} client(s)</div>
           </div>
         </div>
 
-        {/* Bouton nouvelle prestation — CTA principal */}
-        <Link to="/coiffeur/nouvelle" className="btn btn-primary"
-          style={{ fontSize: 18, padding: '18px', marginBottom: 20, borderRadius: 14, display: 'flex' }}>
-          ✂️ Nouvelle coiffure
+        {/* Bouton principale */}
+        <Link to="/coiffeur/nouvelle"
+          style={{
+            display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+            background:'var(--accent)', color:'white', borderRadius:12,
+            padding:'16px', marginBottom:20, textDecoration:'none',
+            fontWeight:500, fontSize:16, border:'none'
+          }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+          Enregistrer une coiffure
         </Link>
 
-        {/* Dernières prestations */}
+        {/* Prestations du jour */}
         <div className="section-title">Aujourd'hui</div>
-        {loading ? null : (
-          localPrestations.filter(p => new Date(p.created_at).toDateString() === today).length === 0 &&
-          (!stats?.derniers?.length) ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">✂️</div>
-              <div>Aucune prestation aujourd'hui</div>
+        {todayLocal.length === 0 && !stats?.derniers?.length ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/></svg>
             </div>
-          ) : (
-            <div className="card">
-              {localPrestations
-                .filter(p => new Date(p.created_at).toDateString() === today)
-                .map(p => (
-                  <div key={p.local_id} className="list-item">
-                    <div className="list-item-left">
-                      <div className="list-item-avatar" style={{ fontSize: 14 }}>
-                        {p.synced ? '✅' : '⏳'}
-                      </div>
-                      <div>
-                        <div className="list-item-name">{coiffures[p.coiffure_id]?.nom || 'Service'}</div>
-                        <div className="list-item-sub">{fmtDate(p.created_at)}</div>
-                      </div>
-                    </div>
-                    <div className="list-item-amount">{fmt(p.prix)}</div>
+            <div className="empty-state-text">Aucune prestation aujourd'hui</div>
+          </div>
+        ) : (
+          <div className="card">
+            {todayLocal.map(p => (
+              <div key={p.local_id} className="list-item">
+                <div className="list-item-left">
+                  <div className="list-item-avatar" style={{
+                    background: p.synced ? 'var(--success-light)' : 'var(--warning-light)',
+                    color: p.synced ? '#065F46' : '#92400E'
+                  }}>
+                    {p.synced
+                      ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    }
                   </div>
-                ))}
-              {/* Prestations serveur qui ne sont pas en local */}
-              {stats?.derniers
-                ?.filter(p => new Date(p.created_at).toDateString() === today)
-                .slice(0, 10)
-                .map(p => (
-                  <div key={p.id} className="list-item">
-                    <div className="list-item-left">
-                      <div className="list-item-avatar">✅</div>
-                      <div>
-                        <div className="list-item-name">{p.coiffures?.nom || 'Service'}</div>
-                        <div className="list-item-sub">{fmtDate(p.created_at)}</div>
-                      </div>
-                    </div>
-                    <div className="list-item-amount">{fmt(p.prix)}</div>
+                  <div>
+                    <div className="list-item-name">{coiffures[p.coiffure_id]?.nom || 'Service'}</div>
+                    <div className="list-item-sub">{fmtTime(p.created_at)}</div>
                   </div>
-                ))}
-            </div>
-          )
+                </div>
+                <div className="list-item-amount">{fmt(p.prix)}</div>
+              </div>
+            ))}
+            {stats?.derniers?.filter(p => new Date(p.created_at).toDateString() === today).slice(0,10).map(p => (
+              <div key={p.id} className="list-item">
+                <div className="list-item-left">
+                  <div className="list-item-avatar" style={{background:'var(--success-light)',color:'#065F46'}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div>
+                    <div className="list-item-name">{p.coiffures?.nom || 'Service'}</div>
+                    <div className="list-item-sub">{fmtTime(p.created_at)}</div>
+                  </div>
+                </div>
+                <div className="list-item-amount">{fmt(p.prix)}</div>
+              </div>
+            ))}
+          </div>
         )}
       </main>
     </div>

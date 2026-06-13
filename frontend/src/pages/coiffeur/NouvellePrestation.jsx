@@ -5,7 +5,7 @@ import { api } from '../../api/client.js';
 import { queuePrestation, getCoiffures, cacheCoiffures } from '../../db/indexeddb.js';
 import { syncPendingData } from '../../sync/syncManager.js';
 
-function fmt(n) { return new Intl.NumberFormat('fr-FR').format(n || 0) + ' FCFA'; }
+function fmt(n) { return new Intl.NumberFormat('fr-FR').format(n||0) + ' F'; }
 
 export default function NouvellePrestation() {
   const { token, user } = useAuth();
@@ -17,16 +17,9 @@ export default function NouvellePrestation() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // D'abord essayer le cache local
-    getCoiffures().then(cached => {
-      if (cached.length > 0) setCoiffures(cached);
-    });
-    // Puis mettre à jour depuis le serveur si en ligne
+    getCoiffures().then(cached => { if (cached.length > 0) setCoiffures(cached); });
     if (navigator.onLine && token) {
-      api.get('/api/coiffures', token).then(list => {
-        setCoiffures(list);
-        cacheCoiffures(list);
-      }).catch(console.warn);
+      api.get('/api/coiffures', token).then(list => { setCoiffures(list); cacheCoiffures(list); }).catch(console.warn);
     }
   }, [token]);
 
@@ -34,34 +27,23 @@ export default function NouvellePrestation() {
     if (!selected) return;
     setLoading(true);
     try {
-      const item = await queuePrestation({
-        coiffure_id: selected.id,
-        coiffeur_id: user.id,
-        prix: selected.prix,
-        note
-      });
-
-      // Tenter sync immédiate si en ligne
-      if (navigator.onLine && token) {
-        await syncPendingData(token);
-      }
-
+      await queuePrestation({ coiffure_id: selected.id, coiffeur_id: user.id, prix: selected.prix, note });
+      if (navigator.onLine && token) await syncPendingData(token);
       setSuccess(true);
-      setTimeout(() => navigate('/coiffeur'), 1500);
-    } catch (err) {
-      alert('Erreur: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
+      setTimeout(() => navigate('/coiffeur'), 1800);
+    } catch (err) { alert('Erreur: ' + err.message); }
+    finally { setLoading(false); }
   }
 
   if (success) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)', gap: 16 }}>
-        <div style={{ fontSize: 80 }}>✅</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success)' }}>Enregistré!</div>
-        <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--gold)' }}>{fmt(selected?.prix)}</div>
-        <div style={{ color: 'var(--text2)', fontSize: 15 }}>{selected?.nom}</div>
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',background:'var(--bg)',gap:12,padding:20}}>
+        <div style={{width:72,height:72,borderRadius:20,background:'var(--success-light)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div style={{fontSize:20,fontWeight:600,color:'var(--text)'}}>Enregistré</div>
+        <div style={{fontSize:28,fontWeight:700,color:'var(--accent)'}}>{fmt(selected?.prix)}</div>
+        <div style={{fontSize:14,color:'var(--text2)'}}>{selected?.nom}</div>
       </div>
     );
   }
@@ -69,66 +51,66 @@ export default function NouvellePrestation() {
   return (
     <div className="app-layout">
       <header className="app-header">
-        <button className="btn btn-secondary btn-sm" onClick={() => navigate('/coiffeur')} style={{ width: 'auto' }}>
-          ← Retour
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/coiffeur')} style={{width:'auto',color:'var(--text2)'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Retour
         </button>
-        <div className="app-header-title">✂️ Nouvelle coiffure</div>
-        <div style={{ width: 60 }} />
+        <div className="app-header-title">Nouvelle coiffure</div>
+        <div style={{width:60}}/>
       </header>
 
       <main className="app-content">
         {coiffures.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">⚠️</div>
-            <div>Aucun service disponible. Le patron doit en ajouter.</div>
+            <div className="empty-state-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div className="empty-state-text">Aucun service disponible. Le patron doit en configurer.</div>
           </div>
         ) : (
           <>
             <div className="section-title">Choisir le service</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+            <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:20}}>
               {coiffures.map(c => (
-                <button key={c.id}
-                  onClick={() => setSelected(selected?.id === c.id ? null : c)}
-                  style={{
-                    background: selected?.id === c.id ? 'rgba(232,184,75,0.15)' : 'var(--card)',
-                    border: `2px solid ${selected?.id === c.id ? 'var(--gold)' : 'var(--border)'}`,
-                    borderRadius: 12,
-                    padding: '16px 18px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    transition: 'all 0.15s'
-                  }}>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{c.nom}</div>
-                    {c.description && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>{c.description}</div>}
+                <div key={c.id}
+                  className={`service-card ${selected?.id === c.id ? 'selected' : ''}`}
+                  onClick={() => setSelected(selected?.id === c.id ? null : c)}>
+                  <div>
+                    <div className="service-card-name">{c.nom}</div>
+                    {c.description && <div className="service-card-desc">{c.description}</div>}
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: selected?.id === c.id ? 'var(--gold)' : 'var(--text2)', flexShrink: 0, marginLeft: 12 }}>
-                    {fmt(c.prix)}
-                  </div>
-                </button>
+                  <div className="service-card-price">{fmt(c.prix)}</div>
+                </div>
               ))}
             </div>
 
             {selected && (
               <>
-                <div className="form-group">
+                <div className="form-group" style={{marginBottom:20}}>
                   <label className="form-label">Note (optionnel)</label>
-                  <input className="form-input" placeholder="Ex: client fidèle, demande spéciale..."
+                  <input className="form-input" placeholder="Remarque particulière..."
                     value={note} onChange={e => setNote(e.target.value)} />
                 </div>
 
-                <button className="btn btn-primary"
-                  onClick={enregistrer}
-                  disabled={loading}
-                  style={{ fontSize: 18, padding: '18px', borderRadius: 14 }}>
-                  {loading ? '⏳ Enregistrement...' : `✅ Enregistrer — ${fmt(selected.prix)}`}
+                {/* Récapitulatif */}
+                <div className="card" style={{marginBottom:14,background:'var(--accent-light)',border:'1px solid #BFDBFE'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div>
+                      <div style={{fontSize:13,color:'#3B82F6',fontWeight:500}}>À enregistrer</div>
+                      <div style={{fontSize:16,fontWeight:600,color:'var(--text)',marginTop:2}}>{selected.nom}</div>
+                    </div>
+                    <div style={{fontSize:24,fontWeight:700,color:'var(--accent)'}}>{fmt(selected.prix)}</div>
+                  </div>
+                </div>
+
+                <button className="btn btn-primary" onClick={enregistrer} disabled={loading}
+                  style={{fontSize:16,padding:'14px'}}>
+                  {loading ? 'Enregistrement...' : 'Confirmer'}
                 </button>
 
                 {!navigator.onLine && (
-                  <p style={{ textAlign: 'center', color: 'var(--text2)', fontSize: 12, marginTop: 10 }}>
-                    📶 Hors ligne — synchronisation automatique au retour
+                  <p style={{textAlign:'center',color:'var(--text2)',fontSize:12,marginTop:10}}>
+                    Hors ligne — sera synchronisé automatiquement
                   </p>
                 )}
               </>
