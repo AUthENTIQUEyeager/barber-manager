@@ -55,9 +55,7 @@ export default function LoginPage() {
         <div style={{display:'flex', flexDirection:'column', gap:8}}>
           <Link to="/register" className="btn btn-secondary">Créer un salon</Link>
           <Link to="/coiffeur-login" className="btn btn-secondary">Espace coiffeur</Link>
-          <Link to="/admin-login" className="btn btn-ghost" style={{fontSize:12, color:'var(--text3)'}}>
-            Admin plateforme
-          </Link>
+          
         </div>
       </div>
     </div>
