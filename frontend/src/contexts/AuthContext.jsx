@@ -1,8 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { saveSession, getSession, clearSession } from '../db/indexeddb.js';
 import { startAutoSync, stopAutoSync } from '../sync/syncManager.js';
 
 const AuthContext = createContext(null);
+
+const LS_KEY = 'bm_session';
+
+function saveToLS(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
+}
+function loadFromLS() {
+  try { const d = localStorage.getItem(LS_KEY); return d ? JSON.parse(d) : null; } catch { return null; }
+}
+function clearLS() {
+  try { localStorage.removeItem(LS_KEY); } catch {}
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -11,23 +22,22 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restaurer session depuis IndexedDB
-    getSession().then(session => {
-      if (session?.token) {
-        setToken(session.token);
-        setUser(session.user);
-        setSalon(session.salon);
-        startAutoSync(() => session.token);
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    // Restaurer depuis localStorage (persiste même si cache vidé)
+    const session = loadFromLS();
+    if (session?.token) {
+      setToken(session.token);
+      setUser(session.user);
+      setSalon(session.salon);
+      startAutoSync(() => session.token);
+    }
+    setLoading(false);
   }, []);
 
   const login = useCallback(async (token, user, salon) => {
     setToken(token);
     setUser(user);
     setSalon(salon);
-    await saveSession({ token, user, salon });
+    saveToLS({ token, user, salon });
     startAutoSync(() => token);
   }, []);
 
@@ -36,11 +46,11 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setSalon(null);
-    await clearSession();
+    clearLS();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, salon, token, login, logout, loading, isOnline: navigator.onLine }}>
+    <AuthContext.Provider value={{ user, salon, token, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
