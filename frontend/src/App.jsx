@@ -34,7 +34,12 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Auth */}
-      <Route path="/" element={<LoginPage />} />
+      <Route path="/" element={
+        user?.role === 'boss' ? <Navigate to="/boss" replace /> :
+        user?.role === 'coiffeur' ? <Navigate to="/coiffeur" replace /> :
+        user?.role === 'admin' ? <Navigate to="/admin" replace /> :
+        <LoginPage />
+      } />
       <Route path="/register" element={<RegisterSalon />} />
       <Route path="/coiffeur-login" element={<LoginCoiffeur />} />
       <Route path="/admin-login" element={<LoginAdmin />} />
