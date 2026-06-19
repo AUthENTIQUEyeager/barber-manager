@@ -46,7 +46,7 @@ function SuspendedModal({ salonNom }) {
 
         {/* Bouton WhatsApp contact */}
         <a
-          href="https://wa.me/22670000000?text=Bonjour%2C%20je%20voudrais%20renouveler%20mon%20abonnement%20BarberManager"
+          href="https://wa.me/22665189025?text=Bonjour%2C%20je%20voudrais%20renouveler%20mon%20abonnement%20BarberManager"
           target="_blank"
           rel="noreferrer"
           style={{

@@ -21,13 +21,11 @@ export default function BossCoiffures() {
   const set = k => e => setForm(p => ({...p, [k]: e.target.value}));
 
   async function addCoiffure(e) {
-    e.preventDefault();
-    setSaving(true); setError('');
+    e.preventDefault(); setSaving(true); setError('');
     try {
       const c = await api.post('/api/coiffures', form, token);
       setCoiffures(prev => [...prev, c]);
-      setForm({ nom: '', prix: '', description: '' });
-      setShowAdd(false);
+      setForm({ nom: '', prix: '', description: '' }); setShowAdd(false);
       toast(`"${c.nom}" ajouté`);
     } catch (err) { setError(err.message); }
     finally { setSaving(false); }
@@ -42,75 +40,61 @@ export default function BossCoiffures() {
     } catch (err) { toast(err.message, 'error'); }
   }
 
-  const addBtn = (
-    <button className="btn btn-primary btn-sm" onClick={() => setShowAdd(true)}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Ajouter
-    </button>
-  );
-
   return (
-    <BossLayout title="Services" action={addBtn}>
-      {loading ? (
-        <div className="loading-screen" style={{height:200}}><div className="spinner"/></div>
-      ) : coiffures.length === 0 ? (
+    <BossLayout title="Services" subtitle={`${coiffures.length} service(s) configuré(s)`}
+      actions={<button className="btn btn-primary btn-sm" onClick={() => setShowAdd(true)}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Ajouter un service
+      </button>}>
+
+      {loading ? <div className="loading-screen" style={{height:200}}><div className="spinner"/></div>
+      : coiffures.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/></svg>
           </div>
-          <div className="empty-state-text">Aucun service configuré. Ajoutez vos prestations.</div>
-          <button className="btn btn-primary btn-sm" style={{marginTop:16,width:'auto'}} onClick={() => setShowAdd(true)}>
-            Ajouter un service
-          </button>
+          <div className="empty-state-text">Aucun service configuré.</div>
+          <button className="btn btn-primary btn-sm" style={{marginTop:16,width:'auto'}} onClick={() => setShowAdd(true)}>Ajouter</button>
         </div>
       ) : (
-        <div className="card">
-          {coiffures.map(c => (
-            <div key={c.id} className="list-item">
-              <div className="list-item-left">
-                <div className="list-item-avatar gray">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/></svg>
-                </div>
-                <div>
-                  <div className="list-item-name">{c.nom}</div>
-                  {c.description && <div className="list-item-sub">{c.description}</div>}
-                </div>
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div className="list-item-amount">{fmt(c.prix)}</div>
-                <button className="btn btn-danger btn-icon" onClick={() => deleteCoiffure(c)} aria-label="Supprimer">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr><th>Service</th><th>Description</th><th>Prix</th><th style={{textAlign:'right'}}>Action</th></tr>
+            </thead>
+            <tbody>
+              {coiffures.map(c => (
+                <tr key={c.id}>
+                  <td><span style={{fontWeight:500}}>{c.nom}</span></td>
+                  <td style={{color:'var(--text2)'}}>{c.description || '—'}</td>
+                  <td><span style={{fontWeight:600,color:'var(--accent)'}}>{fmt(c.prix)}</span></td>
+                  <td style={{textAlign:'right'}}>
+                    <button className="btn btn-danger btn-icon" onClick={() => deleteCoiffure(c)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
       {showAdd && (
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-            <div className="modal-handle"/>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Nouveau service</div>
             {error && <div className="error-msg">{error}</div>}
             <form onSubmit={addCoiffure}>
-              <div className="form-group">
-                <label className="form-label">Nom du service</label>
-                <input className="form-input" placeholder="Ex: Dégradé américain" value={form.nom} onChange={set('nom')} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Prix (FCFA)</label>
-                <input className="form-input" type="number" placeholder="1000" value={form.prix} onChange={set('prix')} required />
-              </div>
-              <div className="form-group" style={{marginBottom:20}}>
-                <label className="form-label">Description (optionnel)</label>
-                <input className="form-input" placeholder="Courte description" value={form.description} onChange={set('description')} />
-              </div>
-              <div style={{display:'flex',gap:10}}>
-                <button className="btn btn-secondary" type="button" onClick={() => setShowAdd(false)}>Annuler</button>
-                <button className="btn btn-primary" type="submit" disabled={saving}>
-                  {saving ? 'Ajout...' : 'Ajouter'}
-                </button>
+              <div className="form-group"><label className="form-label">Nom du service</label>
+                <input className="form-input" placeholder="Ex: Dégradé américain" value={form.nom} onChange={set('nom')} required/></div>
+              <div className="form-group"><label className="form-label">Prix (FCFA)</label>
+                <input className="form-input" type="number" placeholder="1000" value={form.prix} onChange={set('prix')} required/></div>
+              <div className="form-group" style={{marginBottom:20}}><label className="form-label">Description (optionnel)</label>
+                <input className="form-input" placeholder="Courte description" value={form.description} onChange={set('description')}/></div>
+              <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+                <button className="btn btn-secondary btn-sm" type="button" onClick={() => setShowAdd(false)}>Annuler</button>
+                <button className="btn btn-primary btn-sm" type="submit" disabled={saving}>{saving?'Ajout...':'Ajouter'}</button>
               </div>
             </form>
           </div>
